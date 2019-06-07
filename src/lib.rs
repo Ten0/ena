@@ -8,9 +8,12 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-//! An implementation of union-find. See the `unify` module for more
-//! details.
+//! An implementation of union-find and (optionally)
+//! congruence-closure. See the `unify` and `cc` modules for more
+//! details. Note that congruence-closure requires you to opt-in to
+//! the feature "congruence-closure".
 
+// The CC code uses `impl Trait`
 #![cfg_attr(feature = "bench", feature(test))]
 
 #[macro_use]
@@ -19,5 +22,9 @@ extern crate log;
 #[cfg(feature = "persistent")]
 extern crate dogged;
 
+#[cfg(feature = "congruence-closure")]
+extern crate petgraph;
+
+pub mod cc;
 pub mod snapshot_vec;
 pub mod unify;

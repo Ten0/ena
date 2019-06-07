@@ -322,6 +322,23 @@ impl<S: UnificationStore> UnificationTable<S> {
         });
     }
 
+    /// Clears all unifications that were connected to `key`.
+    /// They will all become individual elements again.
+    /// The values of each variable are given by the closure.
+    pub fn reset_unifications_partial(
+        &mut self,
+        key: impl Into<S::Key>,
+        mut value: impl FnMut(S::Key) -> S::Value,
+    ) {
+        let key = key.into();
+        let unioned_keys: Vec<_> = self.unioned_keys(key).collect();
+        for key in unioned_keys {
+            self.update_value(key, |var_value| {
+                std::mem::replace(var_value, VarValue::new_var(key, value(key)));
+            });
+        }
+    }
+
     /// Returns the number of keys created so far.
     pub fn len(&self) -> usize {
         self.values.len()

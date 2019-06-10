@@ -110,10 +110,15 @@ pub trait UnifyValue: Clone + Debug {
     /// found in this crate, which unlocks various more convenient
     /// methods on the unification table.
     type Error;
+    type UnificationParams;
 
     /// Given two values, produce a new value that combines them.
     /// If that is not possible, produce an error.
-    fn unify_values(value1: &Self, value2: &Self) -> Result<Self, Self::Error>;
+    fn unify_values(
+        value1: &Self,
+        value2: &Self,
+        params: Self::UnificationParams,
+    ) -> Result<Self, Self::Error>;
 }
 
 /// A convenient helper for unification values which must be equal or
@@ -131,8 +136,9 @@ pub trait EqUnifyValue: Eq + Clone + Debug {}
 
 impl<T: EqUnifyValue> UnifyValue for T {
     type Error = (T, T);
+    type UnificationParams = ();
 
-    fn unify_values(value1: &Self, value2: &Self) -> Result<Self, Self::Error> {
+    fn unify_values(value1: &Self, value2: &Self, _: ()) -> Result<Self, Self::Error> {
         if value1 == value2 {
             Ok(value1.clone())
         } else {
@@ -551,24 +557,24 @@ where
     /// Unions two keys without the possibility of failure; only
     /// applicable when unify values use `NoError` as their error
     /// type.
-    pub fn union<K1, K2>(&mut self, a_id: K1, b_id: K2)
+    pub fn union_params<K1, K2>(&mut self, a_id: K1, b_id: K2, params: V::UnificationParams)
     where
         K1: Into<K>,
         K2: Into<K>,
         V: UnifyValue<Error = NoError>,
     {
-        self.unify_var_var(a_id, b_id).unwrap();
+        self.unify_var_var_params(a_id, b_id, params).unwrap();
     }
 
     /// Unions a key and a value without the possibility of failure;
     /// only applicable when unify values use `NoError` as their error
     /// type.
-    pub fn union_value<K1>(&mut self, id: K1, value: V)
+    pub fn union_value_params<K1>(&mut self, id: K1, value: V, params: V::UnificationParams)
     where
         K1: Into<K>,
         V: UnifyValue<Error = NoError>,
     {
-        self.unify_var_value(id, value).unwrap();
+        self.unify_var_value_params(id, value, params).unwrap();
     }
 
     /// Given two keys, indicates whether they have been unioned together.
@@ -593,7 +599,12 @@ where
     /// merging the values fails, the error is propagated and this
     /// method has no effect.
     /// Otherwise, returns the new root key
-    pub fn unify_var_var<K1, K2>(&mut self, a_id: K1, b_id: K2) -> Result<S::Key, V::Error>
+    pub fn unify_var_var_params<K1, K2>(
+        &mut self,
+        a_id: K1,
+        b_id: K2,
+        params: <S::Value as UnifyValue>::UnificationParams,
+    ) -> Result<S::Key, V::Error>
     where
         K1: Into<K>,
         K2: Into<K>,
@@ -608,20 +619,26 @@ where
             return Ok(root_a);
         }
 
-        let combined = V::unify_values(&self.value(root_a).value, &self.value(root_b).value)?;
+        let combined =
+            V::unify_values(&self.value(root_a).value, &self.value(root_b).value, params)?;
 
         Ok(self.unify_roots(root_a, root_b, combined))
     }
 
     /// Sets the value of the key `a_id` to `b`, attempting to merge
     /// with the previous value.
-    pub fn unify_var_value<K1>(&mut self, a_id: K1, b: V) -> Result<(), V::Error>
+    pub fn unify_var_value_params<K1>(
+        &mut self,
+        a_id: K1,
+        b: V,
+        params: <S::Value as UnifyValue>::UnificationParams,
+    ) -> Result<(), V::Error>
     where
         K1: Into<K>,
     {
         let a_id = a_id.into();
         let root_a = self.get_root_key(a_id);
-        let value = V::unify_values(&self.value(root_a).value, &b)?;
+        let value = V::unify_values(&self.value(root_a).value, &b, params)?;
         self.update_value(root_a, |node| node.value = value);
         Ok(())
     }
@@ -638,25 +655,81 @@ where
     }
 }
 
+impl<'tcx, S, K, V> UnificationTable<S>
+where
+    S: UnificationStore<Key = K, Value = V>,
+    K: UnifyKey<Value = V>,
+    V: UnifyValue<UnificationParams = ()>,
+{
+    /// Unions two keys without the possibility of failure; only
+    /// applicable when unify values use `NoError` as their error
+    /// type.
+    pub fn union<K1, K2>(&mut self, a_id: K1, b_id: K2)
+    where
+        K1: Into<K>,
+        K2: Into<K>,
+        V: UnifyValue<Error = NoError>,
+    {
+        self.union_params(a_id, b_id, ())
+    }
+
+    /// Unions a key and a value without the possibility of failure;
+    /// only applicable when unify values use `NoError` as their error
+    /// type.
+    pub fn union_value<K1>(&mut self, id: K1, value: V)
+    where
+        K1: Into<K>,
+        V: UnifyValue<Error = NoError>,
+    {
+        self.union_value_params(id, value, ())
+    }
+
+    /// Unions together two variables, merging their values. If
+    /// merging the values fails, the error is propagated and this
+    /// method has no effect.
+    /// Otherwise, returns the new root key
+    pub fn unify_var_var<K1, K2>(&mut self, a_id: K1, b_id: K2) -> Result<S::Key, V::Error>
+    where
+        K1: Into<K>,
+        K2: Into<K>,
+    {
+        self.unify_var_var_params(a_id, b_id, ())
+    }
+
+    /// Sets the value of the key `a_id` to `b`, attempting to merge
+    /// with the previous value.
+    pub fn unify_var_value<K1>(&mut self, a_id: K1, b: V) -> Result<(), V::Error>
+    where
+        K1: Into<K>,
+    {
+        self.unify_var_value_params(a_id, b, ())
+    }
+}
 
 ///////////////////////////////////////////////////////////////////////////
 
 impl UnifyValue for () {
     type Error = NoError;
+    type UnificationParams = ();
 
-    fn unify_values(_: &(), _: &()) -> Result<(), NoError> {
+    fn unify_values(_: &(), _: &(), _: ()) -> Result<(), NoError> {
         Ok(())
     }
 }
 
 impl<V: UnifyValue> UnifyValue for Option<V> {
     type Error = V::Error;
+    type UnificationParams = V::UnificationParams;
 
-    fn unify_values(a: &Option<V>, b: &Option<V>) -> Result<Self, V::Error> {
+    fn unify_values(
+        a: &Option<V>,
+        b: &Option<V>,
+        params: V::UnificationParams,
+    ) -> Result<Self, V::Error> {
         match (a, b) {
             (&None, &None) => Ok(None),
             (&Some(ref v), &None) | (&None, &Some(ref v)) => Ok(Some(v.clone())),
-            (&Some(ref a), &Some(ref b)) => match V::unify_values(a, b) {
+            (&Some(ref a), &Some(ref b)) => match V::unify_values(a, b, params) {
                 Ok(v) => Ok(Some(v)),
                 Err(err) => Err(err),
             },

@@ -4,12 +4,12 @@
 //! paper "Fast Decision Procedures Based on Congruence Closure" by Nelson
 //! and Oppen, JACM 1980.
 
-use petgraph::Direction;
 use petgraph::graph::{Graph, NodeIndex};
+use petgraph::Direction;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::hash::Hash;
-use unify::{NoError, InPlace, InPlaceUnificationTable, UnifyKey, UnifyValue, UnionedKeys};
+use unify::{InPlace, InPlaceUnificationTable, NoError, UnifyKey, UnifyValue, UnionedKeys};
 
 #[cfg(test)]
 mod test;
@@ -96,8 +96,9 @@ impl UnifyKey for Token {
 
 impl UnifyValue for KeyKind {
     type Error = NoError;
+    type UnificationParams = ();
 
-    fn unify_values(&kind1: &Self, &kind2: &Self) -> Result<Self, NoError> {
+    fn unify_values(&kind1: &Self, &kind2: &Self, _params: ()) -> Result<Self, NoError> {
         match (kind1, kind2) {
             (Generative, _) => Ok(Generative),
             (_, Generative) => Ok(Generative),
@@ -217,9 +218,7 @@ impl<K: Key> CongruenceClosure<K> {
 
             debug!(
                 "add: key={:?} successor={:?} predecessors={:?}",
-                key,
-                successor,
-                predecessors
+                key, successor, predecessors
             );
 
             // add edge from new node `Box<Foo>` to its successor `Foo`

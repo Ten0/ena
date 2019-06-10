@@ -16,13 +16,13 @@
 extern crate test;
 #[cfg(feature = "bench")]
 use self::test::Bencher;
-use std::collections::HashSet;
+
 use std::cmp;
-use unify::{NoError, InPlace, InPlaceUnificationTable, UnifyKey, EqUnifyValue, UnifyValue};
-use unify::{UnificationStore, UnificationTable};
+use std::collections::HashSet;
 #[cfg(feature = "persistent")]
 use unify::Persistent;
-
+use unify::{EqUnifyValue, InPlace, InPlaceUnificationTable, NoError, UnifyKey, UnifyValue};
+use unify::{UnificationStore, UnificationTable};
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 struct UnitKey(u32);
 
@@ -49,7 +49,7 @@ macro_rules! all_modes {
 
         #[cfg(feature = "persistent")]
         test_body::<Persistent<$t>>();
-    }
+    };
 }
 
 #[test]
@@ -92,7 +92,7 @@ fn big_array() {
 }
 
 #[cfg(feature = "bench")]
-fn big_array_bench_generic<S: UnificationStore<Key=UnitKey, Value=()>>(b: &mut Bencher) {
+fn big_array_bench_generic<S: UnificationStore<Key = UnitKey, Value = ()>>(b: &mut Bencher) {
     let mut ut: UnificationTable<S> = UnificationTable::new();
     let mut keys = Vec::new();
     const MAX: usize = 1 << 15;
@@ -127,7 +127,9 @@ fn big_array_bench_Persistent(b: &mut Bencher) {
 }
 
 #[cfg(feature = "bench")]
-fn big_array_bench_in_snapshot_generic<S: UnificationStore<Key=UnitKey, Value=()>>(b: &mut Bencher) {
+fn big_array_bench_in_snapshot_generic<S: UnificationStore<Key = UnitKey, Value = ()>>(
+    b: &mut Bencher,
+) {
     let mut ut: UnificationTable<S> = UnificationTable::new();
     let mut keys = Vec::new();
     const MAX: usize = 1 << 15;
@@ -166,7 +168,7 @@ fn big_array_bench_in_snapshot_Persistent(b: &mut Bencher) {
 }
 
 #[cfg(feature = "bench")]
-fn big_array_bench_clone_generic<S: UnificationStore<Key=UnitKey, Value=()>>(b: &mut Bencher) {
+fn big_array_bench_clone_generic<S: UnificationStore<Key = UnitKey, Value = ()>>(b: &mut Bencher) {
     let mut ut: UnificationTable<S> = UnificationTable::new();
     let mut keys = Vec::new();
     const MAX: usize = 1 << 15;
@@ -417,8 +419,9 @@ impl UnifyKey for OrderedKey {
 
 impl UnifyValue for OrderedRank {
     type Error = NoError;
+    type UnificationParams = ();
 
-    fn unify_values(value1: &Self, value2: &Self) -> Result<Self, NoError> {
+    fn unify_values(value1: &Self, value2: &Self, _params: ()) -> Result<Self, NoError> {
         Ok(OrderedRank(cmp::max(value1.0, value2.0)))
     }
 }

@@ -395,7 +395,9 @@ impl<S: UnificationStore> UnificationTable<S> {
     /// really more of a building block. If the values associated with
     /// your key are non-trivial, you would probably prefer to call
     /// `unify_var_var` below.
-    fn unify_roots(&mut self, key_a: S::Key, key_b: S::Key, new_value: S::Value) {
+    ///
+    /// Returns the new root key
+    fn unify_roots(&mut self, key_a: S::Key, key_b: S::Key, new_value: S::Value) -> S::Key {
         debug!("unify(key_a={:?}, key_b={:?})", key_a, key_b);
 
         let rank_a = self.value(key_a).rank;
@@ -424,18 +426,18 @@ impl<S: UnificationStore> UnificationTable<S> {
                     rank_a + 1
                 }
             };
-            self.redirect_root(new_rank, redirected, new_root, new_value);
+            self.redirect_root(new_rank, redirected, new_root, new_value)
         } else if rank_a > rank_b {
             // a has greater rank, so a should become b's parent,
             // i.e., b should redirect to a.
-            self.redirect_root(rank_a, key_b, key_a, new_value);
+            self.redirect_root(rank_a, key_b, key_a, new_value)
         } else if rank_a < rank_b {
             // b has greater rank, so a should redirect to b.
-            self.redirect_root(rank_b, key_a, key_b, new_value);
+            self.redirect_root(rank_b, key_a, key_b, new_value)
         } else {
             // If equal, redirect one to the other and increment the
             // other's rank.
-            self.redirect_root(rank_a + 1, key_a, key_b, new_value);
+            self.redirect_root(rank_a + 1, key_a, key_b, new_value)
         }
     }
 
@@ -443,13 +445,14 @@ impl<S: UnificationStore> UnificationTable<S> {
     /// a root) to a child of `new_root_key` (which will remain a
     /// root). The rank and value of `new_root_key` will be updated to
     /// `new_rank` and `new_value` respectively.
+    /// Returns the new root key
     fn redirect_root(
         &mut self,
         new_rank: u32,
         old_root_key: S::Key,
         new_root_key: S::Key,
         new_value: S::Value,
-    ) {
+    ) -> S::Key {
         let sibling = self
             .value(new_root_key)
             .child(new_root_key)
@@ -460,6 +463,7 @@ impl<S: UnificationStore> UnificationTable<S> {
         self.update_value(new_root_key, |new_root_value| {
             new_root_value.root(new_rank, old_root_key, new_value);
         });
+        new_root_key
     }
 }
 
@@ -588,7 +592,8 @@ where
     /// Unions together two variables, merging their values. If
     /// merging the values fails, the error is propagated and this
     /// method has no effect.
-    pub fn unify_var_var<K1, K2>(&mut self, a_id: K1, b_id: K2) -> Result<(), V::Error>
+    /// Otherwise, returns the new root key
+    pub fn unify_var_var<K1, K2>(&mut self, a_id: K1, b_id: K2) -> Result<S::Key, V::Error>
     where
         K1: Into<K>,
         K2: Into<K>,
@@ -600,7 +605,7 @@ where
         let root_b = self.get_root_key(b_id);
 
         if root_a == root_b {
-            return Ok(());
+            return Ok(root_a);
         }
 
         let combined = V::unify_values(&self.value(root_a).value, &self.value(root_b).value)?;

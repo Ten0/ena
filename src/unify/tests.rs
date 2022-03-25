@@ -21,7 +21,7 @@ use std::collections::HashSet;
 #[cfg(feature = "persistent")]
 use unify::Persistent;
 use unify::{
-    ConnectedComponentTraversal, EqUnifyValue, InPlace, InPlaceUnificationTable, NoError,
+    ConnectedComponentTraversal, EqUnifyValue, InPlace, InPlaceUnificationTable, Infallible,
     NoExtraTraversalData, UnifyKey, UnifyValue,
 };
 use unify::{UnificationStore, UnificationTable};
@@ -429,9 +429,9 @@ impl UnifyKey for OrderedKey {
 }
 
 impl UnifyValue for OrderedRank {
-    type Error = NoError;
+    type Error = Infallible;
 
-    fn unify_values(value1: &Self, value2: &Self) -> Result<Self, NoError> {
+    fn unify_values(value1: &Self, value2: &Self) -> Result<Self, Infallible> {
         Ok(OrderedRank(cmp::max(value1.0, value2.0)))
     }
 }

@@ -32,7 +32,7 @@ pub trait UnificationStoreBase:
 pub trait UnificationStoreMut: UnificationStoreBase {
     fn reset_unifications(
         &mut self,
-        value: impl FnMut(u32) -> VarValue<Self::Key, Self::ExtraTraversalData>,
+        value: impl FnMut(usize) -> VarValue<Self::Key, Self::ExtraTraversalData>,
     );
 
     fn push(&mut self, value: VarValue<Self::Key, Self::ExtraTraversalData>);
@@ -108,9 +108,9 @@ where
     #[inline]
     fn reset_unifications(
         &mut self,
-        mut value: impl FnMut(u32) -> VarValue<Self::Key, Self::ExtraTraversalData>,
+        mut value: impl FnMut(usize) -> VarValue<Self::Key, Self::ExtraTraversalData>,
     ) {
-        self.values.set_all(|i| value(i as u32));
+        self.values.set_all(|i| value(i));
     }
 
     #[inline]
@@ -225,13 +225,13 @@ impl<K: UnifyKey, TD: ExtraTraversalData<K>> UnificationStoreMut for Persistent<
     #[inline]
     fn reset_unifications(
         &mut self,
-        mut value: impl FnMut(u32) -> VarValue<Self::Key, Self::ExtraTraversalData>,
+        mut value: impl FnMut(usize) -> VarValue<Self::Key, Self::ExtraTraversalData>,
     ) {
         // Without extending dogged, there isn't obviously a more
         // efficient way to do this. But it's pretty dumb. Maybe
         // dogged needs a `map`.
         for i in 0..self.values.len() {
-            self.values[i] = value(i as u32);
+            self.values[i] = value(i);
         }
     }
 

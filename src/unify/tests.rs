@@ -27,14 +27,14 @@ use unify::{
 use unify::{UnificationStore, UnificationTable};
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
-struct UnitKey(u32);
+struct UnitKey(usize);
 
 impl UnifyKey for UnitKey {
     type Value = ();
-    fn index(&self) -> u32 {
+    fn index(&self) -> usize {
         self.0
     }
-    fn from_index(u: u32) -> UnitKey {
+    fn from_index(u: usize) -> UnitKey {
         UnitKey(u)
     }
     fn tag() -> &'static str {
@@ -274,14 +274,14 @@ fn even_odd_iter() {
 }
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
-struct IntKey(u32);
+struct IntKey(usize);
 
 impl UnifyKey for IntKey {
     type Value = Option<i32>;
-    fn index(&self) -> u32 {
+    fn index(&self) -> usize {
         self.0
     }
-    fn from_index(u: u32) -> IntKey {
+    fn from_index(u: usize) -> IntKey {
         IntKey(u)
     }
     fn tag() -> &'static str {
@@ -395,17 +395,17 @@ fn unify_root_value_2() {
 }
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
-struct OrderedKey(u32);
+struct OrderedKey(usize);
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
-struct OrderedRank(u32);
+struct OrderedRank(usize);
 
 impl UnifyKey for OrderedKey {
     type Value = OrderedRank;
-    fn index(&self) -> u32 {
+    fn index(&self) -> usize {
         self.0
     }
-    fn from_index(u: u32) -> OrderedKey {
+    fn from_index(u: usize) -> OrderedKey {
         OrderedKey(u)
     }
     fn tag() -> &'static str {
